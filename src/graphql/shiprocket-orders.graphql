@@ -1,0 +1,158 @@
+# Create draft order in Saleor
+mutation CreateDraftOrder($input: DraftOrderCreateInput!) {
+  draftOrderCreate(input: $input) {
+    order {
+      id
+      number
+      created
+      status
+      total {
+        gross {
+          amount
+          currency
+        }
+      }
+      user {
+        email
+      }
+      shippingAddress {
+        firstName
+        lastName
+        streetAddress1
+        city
+        postalCode
+        country {
+          code
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Complete draft order (converts to regular order)
+mutation CompleteDraftOrder($id: ID!) {
+  draftOrderComplete(id: $id) {
+    order {
+      id
+      number
+      status
+      created
+      total {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Add shipping method to draft order
+mutation UpdateDraftOrderShippingMethod($id: ID!, $shippingMethod: ID!) {
+  draftOrderUpdate(
+    id: $id
+    input: { shippingMethod: $shippingMethod }
+  ) {
+    order {
+      id
+      shippingMethodName
+      shippingPrice {
+        gross {
+          amount
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Mark order as paid (for prepaid orders)
+mutation OrderMarkAsPaid($id: ID!, $transactionReference: String) {
+  orderMarkAsPaid(id: $id, transactionReference: $transactionReference) {
+    order {
+      id
+      isPaid
+      paymentStatus
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Add note to order
+mutation OrderNoteAdd($orderId: ID!, $message: String!) {
+  orderNoteAdd(order: $orderId, input: { message: $message }) {
+    order {
+      id
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Fetch variant details for order creation
+query GetVariantDetails($id: ID!, $channel: String!) {
+  productVariant(id: $id, channel: $channel) {
+    id
+    name
+    sku
+    product {
+      id
+      name
+    }
+    pricing {
+      price {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+    quantityAvailable
+  }
+}
+
+# Fetch available shipping methods for channel
+query GetShippingMethods($channel: String!) {
+  shippingZones(first: 10, channel: $channel) {
+    edges {
+      node {
+        id
+        name
+        shippingMethods {
+          id
+          name
+          price {
+            amount
+          }
+          minimumOrderPrice {
+            amount
+          }
+          maximumOrderPrice {
+            amount
+          }
+        }
+      }
+    }
+  }
+}
