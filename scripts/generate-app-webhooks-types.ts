@@ -1,6 +1,10 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 
 import { compile } from "json-schema-to-typescript";
+
+// Ensure output directory exists
+const outputDir = "./generated/app-webhooks-types";
+mkdirSync(outputDir, { recursive: true });
 
 const schemaFileNames = [
   // List of all Saleor webhook response schemas - uncomment those you need

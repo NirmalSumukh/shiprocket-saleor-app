@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm run generate && pnpm build",
+  "buildCommand": "mkdir -p generated && pnpm run generate:app-graphql-types && pnpm run generate:app-webhooks-types && pnpm build",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
   "framework": "nextjs",
