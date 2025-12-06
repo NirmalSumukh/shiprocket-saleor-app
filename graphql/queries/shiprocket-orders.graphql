@@ -1,0 +1,51 @@
+# Get variant details for validation
+query GetVariantDetails($id: ID!, $channel: String!) {
+  productVariant(id: $id, channel: $channel) {
+    id
+    name
+    sku
+    quantityAvailable
+    product {
+      id
+      name
+    }
+    pricing {
+      price {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+    weight {
+      value
+      unit
+    }
+  }
+}
+
+# Get available shipping methods
+query GetShippingMethods($channel: String!) {
+  shippingZones(first: 10, channel: $channel) {
+    edges {
+      node {
+        id
+        name
+        shippingMethods {
+          id
+          name
+          minimumOrderWeight {
+            value
+            unit
+          }
+          maximumOrderWeight {
+            value
+            unit
+          }
+          minimumDeliveryDays
+          maximumDeliveryDays
+        }
+      }
+    }
+  }
+}
