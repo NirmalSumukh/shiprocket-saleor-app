@@ -1,0 +1,109 @@
+# Create draft order from ShipRocket webhook
+mutation CreateDraftOrder($input: DraftOrderCreateInput!) {
+  draftOrderCreate(input: $input) {
+    order {
+      id
+      number
+      status
+      created
+      user {
+        email
+      }
+      lines {
+        id
+        quantity
+        variant {
+          id
+          sku
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Complete draft order (convert to real order)
+mutation CompleteDraftOrder($id: ID!) {
+  draftOrderComplete(id: $id) {
+    order {
+      id
+      number
+      status
+      created
+      total {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Mark order as paid (for prepaid orders)
+mutation OrderMarkAsPaid($id: ID!, $transactionReference: String!) {
+  orderMarkAsPaid(id: $id, transactionReference: $transactionReference) {
+    order {
+      id
+      number
+      isPaid
+      paymentStatus
+      paymentStatusDisplay
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Add note to order
+mutation OrderNoteAdd($orderId: ID!, $message: String!) {
+  orderNoteAdd(order: $orderId, input: { message: $message }) {
+    order {
+      id
+      number
+    }
+    event {
+      id
+      message
+      date
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
+
+# Update draft order shipping method
+mutation UpdateDraftOrderShippingMethod($id: ID!, $shippingMethod: ID!) {
+  draftOrderUpdate(id: $id, input: { shippingMethod: $shippingMethod }) {
+    order {
+      id
+      shippingMethodName
+      shippingPrice {
+        gross {
+          amount
+          currency
+        }
+      }
+    }
+    errors {
+      field
+      message
+      code
+    }
+  }
+}
