@@ -25,9 +25,19 @@ export function generateHMAC(payload: string | object): string {
  */
 export function verifyHMAC(payload: string | object, receivedHmac: string): boolean {
   const expectedHmac = generateHMAC(payload);
+  
+  // Convert to Uint8Array to satisfy TypeScript's strict type checking
+  const expectedBuffer = Buffer.from(expectedHmac, 'utf8');
+  const receivedBuffer = Buffer.from(receivedHmac, 'utf8');
+  
+  // timingSafeEqual requires buffers of equal length
+  if (expectedBuffer.length !== receivedBuffer.length) {
+    return false;
+  }
+  
   return crypto.timingSafeEqual(
-    Buffer.from(expectedHmac),
-    Buffer.from(receivedHmac)
+    new Uint8Array(expectedBuffer),
+    new Uint8Array(receivedBuffer)
   );
 }
 

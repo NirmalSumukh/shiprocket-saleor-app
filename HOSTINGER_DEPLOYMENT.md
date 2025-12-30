@@ -1,16 +1,16 @@
-# Hostinger Deployment Guide
+# Hostinger VPS Deployment Guide
 
-Quick guide to deploy the Saleor ShipRocket app on Hostinger VPS.
+Deploy the Saleor ShipRocket app at `shiprocket.leemasmart.com`.
 
 ## Prerequisites
 
-- Hostinger VPS with Docker and Docker Compose installed
-- Domain `shiprocket.leemasmart.com` pointing to your VPS IP
-- PostgreSQL database (can use same as Saleor)
+- Saleor backend running at `saleor.leemasmart.com` (provides Traefik + leemasmart-network)
+- DNS: `shiprocket.leemasmart.com` → VPS IP address
+- SSH access to your VPS
 
-## Step-by-Step Deployment
+## Deployment Steps
 
-### 1. SSH into your VPS
+### 1. SSH into VPS
 
 ```bash
 ssh root@your-vps-ip
@@ -19,90 +19,98 @@ ssh root@your-vps-ip
 ### 2. Clone the repository
 
 ```bash
-git clone <your-repo-url>
-cd saleor-app-template
+cd /opt
+git clone https://github.com/NirmalSumukh/shiprocket-saleor-app.git
+cd shiprocket-saleor-app
 ```
 
 ### 3. Create environment file
 
 ```bash
 cp .env.production.example .env
-nano .env  # Edit with your actual values
+nano .env
 ```
 
-**Required values to update:**
-- `SECRET_KEY` - Generate with `openssl rand -base64 32`
-- `SALEOR_API_URL` - Your Saleor GraphQL endpoint
-- `DATABASE_URL` - PostgreSQL connection string
-- `SHIPROCKET_API_KEY` / `SHIPROCKET_SECRET_KEY` - From ShipRocket
-- `STOREFRONT_URL` - Your main website URL
-- `ALLOWED_ORIGINS` - Include all domains that will call this app
+**Update these values:**
+```env
+SECRET_KEY=<generate with: openssl rand -base64 32>
+# Leave SHIPROCKET_API_KEY and SHIPROCKET_SECRET_KEY empty until ShipRocket provides them
+```
 
-### 4. Setup SSL Certificate
+### 4. Build and start
 
 ```bash
-# Update email in script first
-nano scripts/setup-ssl.sh  # Change EMAIL variable
-
-# Make executable and run
-chmod +x scripts/setup-ssl.sh
-sudo ./scripts/setup-ssl.sh
+docker-compose up -d --build
 ```
 
-### 5. Verify Deployment
+> **Note:** The build process automatically runs `pnpm generate` to create GraphQL types from the schema.
+
+### 5. Verify deployment
 
 ```bash
 # Check container status
-docker-compose ps
+docker ps | grep shiprocket
 
-# View logs
-docker-compose logs -f
+# Check logs
+docker logs -f saleor-shiprocket-app
 
 # Test health endpoint
 curl https://shiprocket.leemasmart.com/api/health
 ```
 
-## Install App in Saleor
+## Install App in Saleor Dashboard
 
 1. Open Saleor Dashboard → Apps → Install External App
 2. Enter: `https://shiprocket.leemasmart.com/api/manifest`
-3. Grant required permissions
-4. Copy the app token to your `.env` file (`SALEOR_APP_TOKEN`)
-5. Restart: `docker-compose restart app`
+3. Grant required permissions:
+   - `MANAGE_PRODUCTS`
+   - `MANAGE_ORDERS`
+   - `MANAGE_CHECKOUTS`
+4. Copy the generated app token to your `.env` file (`SALEOR_APP_TOKEN`)
+5. Restart: `docker-compose restart`
+
+## Register with ShipRocket
+
+After deployment, provide ShipRocket team with:
+
+**Catalog APIs:**
+- Products: `https://shiprocket.leemasmart.com/api/shiprocket/catalog/products`
+- Collections: `https://shiprocket.leemasmart.com/api/shiprocket/catalog/collections`
+- Products by Collection: `https://shiprocket.leemasmart.com/api/shiprocket/catalog/collections/{id}/products`
+
+**Order Webhook:**
+- `https://shiprocket.leemasmart.com/api/shiprocket/webhooks/order-placed`
+
+They will provide `SHIPROCKET_API_KEY` and `SHIPROCKET_SECRET_KEY` - add these to your `.env`.
 
 ## Common Commands
 
 ```bash
-# Restart services
+# Restart
 docker-compose restart
 
 # Rebuild after code changes
+git pull
 docker-compose up -d --build
 
 # View logs
-docker-compose logs -f app
+docker logs -f saleor-shiprocket-app
 
-# Stop all services
+# Stop
 docker-compose down
-
-# Full rebuild (clear cache)
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
 ```
 
 ## Troubleshooting
 
-**SSL Certificate Issues:**
-- Ensure domain points to VPS IP
-- Port 80 must be open for Let's Encrypt
-- Run `docker-compose logs certbot` for errors
+**Container not starting:**
+- Check logs: `docker logs saleor-shiprocket-app`
+- Verify leemasmart-network exists: `docker network ls | grep leemasmart`
 
-**App Not Starting:**
-- Check `docker-compose logs app`
-- Verify all env variables are set
-- Ensure PostgreSQL is accessible
+**SSL not working:**
+- Traefik handles SSL automatically
+- Check Traefik logs: `docker logs leemasmart-traefik`
+- Verify DNS: `dig shiprocket.leemasmart.com`
 
-**Cannot Connect to Saleor:**
-- Verify `SALEOR_API_URL` is correct
-- Check if Saleor instance allows your app's origin
+**Cannot connect to Saleor:**
+- Verify Saleor is running: `curl https://saleor.leemasmart.com/graphql/`
+- Check CORS settings in Saleor

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@/saleor-app-checkout/backend/saleor';
+import { createClientWithToken } from '@/lib/saleor/create-client';
 import { CatalogService } from '@/lib/shiprocket/catalog-service';
 import { logger } from '@/lib/shiprocket/logger';
 
@@ -8,6 +8,7 @@ import { logger } from '@/lib/shiprocket/logger';
  * 
  * ShipRocket calls this to fetch products in a specific collection
  * Query params: page, limit, channel
+ * Route params: collectionId
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -15,24 +16,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Extract route parameter
     const { collectionId } = req.query;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
-    const channel = (req.query.channel as string) || 'default-channel';
 
+    // Validate collection ID
     if (!collectionId || typeof collectionId !== 'string') {
       return res.status(400).json({ error: 'Collection ID is required' });
     }
+
+    // Extract query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
+    const channel = (req.query.channel as string) || 'default-channel';
 
     logger.info(
       `ShipRocket catalog request: products for collection ${collectionId}, page=${page}, limit=${limit}`
     );
 
-    const saleorApiUrl = process.env.SALEOR_API_URL || '';
-    const client = createClient(saleorApiUrl, async () => ({
-      token: process.env.SALEOR_APP_TOKEN || '',
-    }));
+    // Get Saleor API configuration
+    const saleorApiUrl = process.env.SALEOR_API_URL;
+    const saleorAppToken = process.env.SALEOR_APP_TOKEN;
 
+    if (!saleorApiUrl || !saleorAppToken) {
+      logger.error('Missing Saleor configuration');
+      return res.status(500).json({
+        error: 'Server configuration error',
+        message: 'Saleor API configuration missing',
+      });
+    }
+
+    // Create authenticated client
+    const client = createClientWithToken(saleorApiUrl, saleorAppToken);
+
+    // Fetch products by collection
     const catalogService = new CatalogService(client);
     const response = await catalogService.fetchProductsByCollection(
       collectionId,
@@ -41,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       channel
     );
 
-    logger.info(`Returning ${response.products.length} products for collection`);
+    logger.info(`Returning ${response.products.length} products for collection ${collectionId}`);
 
     return res.status(200).json(response);
   } catch (error: any) {

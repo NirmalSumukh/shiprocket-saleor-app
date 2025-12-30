@@ -1,49 +1,94 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================
+# DEPENDENCIES
+# ============================================
+node_modules/
+.pnpm-store/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# ============================================
+# BUILD OUTPUTS
+# ============================================
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
 
-# testing
-/coverage
+# ============================================
+# ENVIRONMENT FILES (SENSITIVE!)
+# ============================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
 
-# next.js
-/.next/
-/out/
+# Keep example files
+!.env.example
+!.env.production.example
 
-# production
-/build
+# ============================================
+# SALEOR APP AUTH (SENSITIVE!)
+# ============================================
+.saleor-app-auth.json
 
-# misc
-.DS_Store
-*.pem
+# ============================================
+# SSL CERTIFICATES (SENSITIVE!)
+# ============================================
+certbot/
 
-# debug
+# ============================================
+# GENERATED FILES
+# ============================================
+# GraphQL generated types (regenerated on build)
+generated/
+
+# ============================================
+# LOGS
+# ============================================
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# local env files
-.env*.local
-.envfile
-.saleor-app-auth.json
+# ============================================
+# TESTING
+# ============================================
+coverage/
+.nyc_output/
 
-# vercel
+# ============================================
+# IDE / EDITOR
+# ============================================
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# ============================================
+# OS FILES
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# MISC
+# ============================================
+*.local
 .vercel
+.turbo
 
-# typescript
-*.tsbuildinfo
-
-.auth_token
-
-#editor
-!.vscode/mcp.json
-
-.idea
-
-# Sentry
-.sentryclirc
-
-.env
+# ============================================
+# DEBUG
+# ============================================
+.pnpm-debug.log

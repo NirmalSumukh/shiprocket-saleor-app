@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@/saleor-app-checkout/backend/saleor';
+import { createClientWithToken } from '@/lib/saleor/create-client';
 import { CatalogService } from '@/lib/shiprocket/catalog-service';
 import { logger } from '@/lib/shiprocket/logger';
 
@@ -21,13 +21,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     logger.info(`ShipRocket catalog request: products page=${page}, limit=${limit}`);
 
-    // Create Saleor GraphQL client
-    // Note: Adjust based on your app's client creation method
-    const saleorApiUrl = process.env.SALEOR_API_URL || '';
-    const client = createClient(saleorApiUrl, async () => ({
-      token: process.env.SALEOR_APP_TOKEN || '',
-    }));
+    // Get Saleor API configuration from environment
+    const saleorApiUrl = process.env.SALEOR_API_URL;
+    const saleorAppToken = process.env.SALEOR_APP_TOKEN;
 
+    if (!saleorApiUrl || !saleorAppToken) {
+      logger.error('Missing Saleor configuration');
+      return res.status(500).json({
+        error: 'Server configuration error',
+        message: 'Saleor API configuration missing',
+      });
+    }
+
+    // Create authenticated Saleor GraphQL client
+    const client = createClientWithToken(saleorApiUrl, saleorAppToken);
+
+    // Fetch products using catalog service
     const catalogService = new CatalogService(client);
     const response = await catalogService.fetchProducts(page, limit, channel);
 

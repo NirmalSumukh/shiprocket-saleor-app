@@ -1,26 +1,39 @@
-import { createAppRegisterHandler } from "@saleor/app-sdk/handlers/next";
-
-import { saleorApp } from "@/saleor-app";
+import { createAppRegisterHandler } from '@saleor/app-sdk/handlers/next';
+import { saleorApp } from '@/saleor-app';
 
 /**
- * Required endpoint, called by Saleor to install app.
- * It will exchange tokens with app, so saleorApp.apl will contain token
+ * Required endpoint for app installation
+ * Saleor sends auth token here during installation
  */
-export default createAppRegisterHandler({
+const handler = createAppRegisterHandler({
   apl: saleorApp.apl,
-
+  /**
+   * Allow all URLs in development, restrict in production
+   * The parameter is a string URL, not a URL object
+   */
   allowedSaleorUrls: [
-    /**
-     * You may want your app to work only for certain Saleor instances.
-     *
-     * Your app can work for every Saleor that installs it, but you can
-     * limit it here
-     *
-     * By default, every url is allowed.
-     *
-     * URL should be a full graphQL address, usually starting with https:// and ending with /graphql/
-     *
-     * Alternatively pass a function
-     */
+    (saleorApiUrl: string) => {
+      // In development, allow everything
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Register] Allowing Saleor URL:', saleorApiUrl);
+        return true;
+      }
+      
+      // In production, parse and check hostname
+      try {
+        const url = new URL(saleorApiUrl);
+        const allowedHosts = [
+          'your-production-saleor.com',
+          'localhost',
+        ];
+        
+        return allowedHosts.includes(url.hostname);
+      } catch (error) {
+        console.error('[Register] Invalid URL:', saleorApiUrl);
+        return false;
+      }
+    },
   ],
 });
+
+export default handler;

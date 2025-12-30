@@ -1,4 +1,4 @@
-import { Client } from 'urql';
+import { Client, type OperationResult } from 'urql';
 import {
   CreateDraftOrderDocument,
   CompleteDraftOrderDocument,
@@ -7,6 +7,8 @@ import {
   UpdateDraftOrderShippingMethodDocument,
   GetVariantDetailsDocument,
   GetShippingMethodsDocument,
+  CountryCode,
+  type DraftOrderCreateInput,
 } from '../../../generated/graphql';
 import { ShiprocketOrderWebhook } from './types';
 import { logger } from './logger';
@@ -116,7 +118,7 @@ export class OrderService {
     for (const item of items) {
       try {
         // Fetch variant details to validate it exists
-        const result = await this.client
+        const result: OperationResult<any, any> = await this.client
           .query(GetVariantDetailsDocument, {
             id: item.variant_id,
             channel,
@@ -133,12 +135,13 @@ export class OrderService {
 
         const variant = result.data.productVariant;
 
-        // Check stock availability
-        if (variant.quantityAvailable !== null && variant.quantityAvailable < item.quantity) {
+        // Check stock availability (handle null/undefined)
+        const availableStock = variant.quantityAvailable ?? 0;
+        if (availableStock < item.quantity) {
           logger.warn('Insufficient stock for variant', {
             variantId: item.variant_id,
             requested: item.quantity,
-            available: variant.quantityAvailable,
+            available: availableStock,
           });
         }
 
@@ -172,7 +175,7 @@ export class OrderService {
         webhookData.billing_address || webhookData.shipping_address
       );
 
-      const input = {
+      const input: DraftOrderCreateInput = {
         channelId: channel,
         userEmail: webhookData.email,
         shippingAddress,
@@ -183,7 +186,7 @@ export class OrderService {
         })),
       };
 
-      const result = await this.client
+      const result: OperationResult<any, any> = await this.client
         .mutation(CreateDraftOrderDocument, { input })
         .toPromise();
 
@@ -197,7 +200,6 @@ export class OrderService {
       }
 
       const orderId = result.data?.draftOrderCreate?.order?.id;
-
       if (!orderId) {
         return { success: false, error: 'No order ID returned' };
       }
@@ -216,7 +218,7 @@ export class OrderService {
     orderId: string
   ): Promise<{ success: boolean; orderNumber?: string; error?: string }> {
     try {
-      const result = await this.client
+      const result: OperationResult<any, any> = await this.client
         .mutation(CompleteDraftOrderDocument, { id: orderId })
         .toPromise();
 
@@ -230,7 +232,6 @@ export class OrderService {
       }
 
       const orderNumber = result.data?.draftOrderComplete?.order?.number;
-
       return { success: true, orderNumber };
     } catch (error: any) {
       logger.error('Error completing draft order', error);
@@ -244,7 +245,7 @@ export class OrderService {
   private async addShippingMethod(orderId: string, channel: string) {
     try {
       // Fetch available shipping methods
-      const result = await this.client
+      const result: OperationResult<any, any> = await this.client
         .query(GetShippingMethodsDocument, { channel })
         .toPromise();
 
@@ -278,7 +279,7 @@ export class OrderService {
    */
   private async markOrderAsPaid(orderId: string, transactionReference: string) {
     try {
-      const result = await this.client
+      const result: OperationResult<any, any> = await this.client
         .mutation(OrderMarkAsPaidDocument, {
           id: orderId,
           transactionReference,
@@ -320,6 +321,7 @@ export class OrderService {
 
   /**
    * Build address object for Saleor
+   * Returns properly typed AddressInput with CountryCode
    */
   private buildAddress(address?: ShiprocketOrderWebhook['shipping_address']) {
     if (!address) {
@@ -329,24 +331,46 @@ export class OrderService {
         streetAddress1: 'Address not provided',
         city: 'Unknown',
         postalCode: '000000',
-        country: 'IN',
+        country: CountryCode.In, // ✅ Use enum instead of string
       };
     }
 
-    // Extract first and last name if full name is provided
-    const nameParts = address.city?.split(' ') || ['Guest', 'Customer'];
-    const firstName = nameParts[0] || 'Guest';
-    const lastName = nameParts.slice(1).join(' ') || 'Customer';
+    // Extract first and last name from customer details if available
+    const firstName = address.city?.split(' ')[0] || 'Guest';
+    const lastName = address.city?.split(' ').slice(1).join(' ') || 'Customer';
+
+    // Map country code string to CountryCode enum
+    const countryCode = this.mapCountryCode(address.country);
 
     return {
       firstName,
       lastName,
       streetAddress1: address.address_line_1 || 'Not provided',
-      streetAddress2: address.address_line_2 || '',
+      streetAddress2: address.address_line_2 || undefined,
       city: address.city || 'Unknown',
-      countryArea: address.state || '',
+      countryArea: address.state || undefined,
       postalCode: address.pincode || '000000',
-      country: address.country || 'IN',
+      country: countryCode,
     };
+  }
+
+  /**
+   * Map country string to CountryCode enum
+   * Defaults to IN (India) for ShipRocket
+   */
+  private mapCountryCode(country?: string): CountryCode {
+    if (!country) return CountryCode.In;
+
+    // Convert to uppercase and match to CountryCode enum
+    const upperCountry = country.toUpperCase();
+    
+    // Check if it's a valid CountryCode
+    if (Object.values(CountryCode).includes(upperCountry as CountryCode)) {
+      return upperCountry as CountryCode;
+    }
+
+    // Default to India for ShipRocket (most common case)
+    logger.warn('Unknown country code, defaulting to IN', { country });
+    return CountryCode.In;
   }
 }

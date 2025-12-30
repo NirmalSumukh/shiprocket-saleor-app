@@ -1,4 +1,4 @@
-import { Client } from 'urql';
+import { Client, type OperationResult } from 'urql';
 import {
   FetchProductsForShipRocketDocument,
   FetchCollectionsForShipRocketDocument,
@@ -25,7 +25,7 @@ export class CatalogService {
 
       // Fetch pages until we have enough products for the requested page
       while (hasNextPage && allProducts.length < itemsToFetch) {
-        const result = await this.client
+        const result: OperationResult<any, any> = await this.client
           .query(FetchProductsForShipRocketDocument, {
             first: limit,
             after: cursor,
@@ -72,7 +72,7 @@ export class CatalogService {
       let totalCount = 0;
 
       while (hasNextPage && allCollections.length < itemsToFetch) {
-        const result = await this.client
+        const result: OperationResult<any, any> = await this.client
           .query(FetchCollectionsForShipRocketDocument, {
             first: limit,
             after: cursor,
@@ -123,7 +123,7 @@ export class CatalogService {
       let totalCount = 0;
 
       while (hasNextPage && allProducts.length < itemsToFetch) {
-        const result = await this.client
+        const result: OperationResult<any, any> = await this.client
           .query(FetchProductsByCollectionDocument, {
             collectionId,
             first: limit,

@@ -1,0 +1,109 @@
+# ============================================
+# Saleor ShipRocket App - Traefik Integration
+# ============================================
+# 
+# This app integrates with your existing Saleor backend's Traefik reverse proxy.
+# It joins the leemasmart-network to communicate with other services.
+#
+# Prerequisites:
+#   1. Saleor backend must be running (creates leemasmart-network)
+#   2. Traefik must be running and watching Docker socket
+#   3. DNS: shiprocket.leemasmart.com → VPS IP
+#
+# Usage:
+#   docker-compose up -d --build
+#
+# ============================================
+
+services:
+  # ============================================
+  # Saleor ShipRocket App
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saleor-shiprocket-app
+    restart: unless-stopped
+    environment:
+      # Core App Configuration
+      - NODE_ENV=production
+      - APL=${APL:-file}
+      - SECRET_KEY=${SECRET_KEY}
+
+      # App URLs (your subdomain)
+      - APP_IFRAME_BASE_URL=https://shiprocket.leemasmart.com
+      - APP_API_BASE_URL=https://shiprocket.leemasmart.com
+      - NEXT_PUBLIC_APP_URL=https://shiprocket.leemasmart.com
+
+      # Saleor Configuration
+      - SALEOR_API_URL=${SALEOR_API_URL:-https://saleor.leemasmart.com/graphql/}
+      - SALEOR_APP_TOKEN=${SALEOR_APP_TOKEN}
+      - DEFAULT_CHANNEL=${DEFAULT_CHANNEL:-default-channel}
+
+      # ShipRocket Configuration
+      - SHIPROCKET_API_KEY=${SHIPROCKET_API_KEY}
+      - SHIPROCKET_SECRET_KEY=${SHIPROCKET_SECRET_KEY}
+      - SHIPROCKET_API_BASE_URL=${SHIPROCKET_API_BASE_URL:-https://checkout-api.shiprocket.com}
+
+      # PostgreSQL APL Configuration (optional, only if APL=saleor-cloud-apl)
+      - DATABASE_URL=${DATABASE_URL:-}
+
+      # Storefront URL
+      - STOREFRONT_URL=${STOREFRONT_URL:-https://leemasmart.com}
+
+      # CORS
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://leemasmart.com,https://saleor.leemasmart.com,https://shiprocket.leemasmart.com}
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    labels:
+      # ============================================
+      # Traefik Configuration
+      # ============================================
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+      
+      # Docker network to use
+      - "traefik.docker.network=leemasmart-network"
+      
+      # HTTPS Router - Main route for shiprocket.leemasmart.com
+      - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
+      - "traefik.http.routers.shiprocket.entrypoints=websecure"
+      - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
+      
+      # Load balancer configuration
+      - "traefik.http.services.shiprocket.loadbalancer.server.port=3010"
+      
+      # Security headers middleware
+      - "traefik.http.routers.shiprocket.middlewares=shiprocket-headers"
+      - "traefik.http.middlewares.shiprocket-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.shiprocket-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.shiprocket-headers.headers.stsIncludeSubdomains=true"
+    volumes:
+      # Persistent storage for file-based APL (stores app auth tokens)
+      - shiprocket-data:/app/data
+    networks:
+      - leemasmart-network
+    expose:
+      - "3010"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ============================================
+# Networks - Join existing Saleor network
+# ============================================
+networks:
+  leemasmart-network:
+    external: true
+
+# ============================================
+# Volumes - Persistent data storage
+# ============================================
+volumes:
+  shiprocket-data:
+    driver: local

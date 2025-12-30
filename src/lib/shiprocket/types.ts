@@ -1,5 +1,6 @@
 /**
  * ShipRocket Order Webhook Payload
+ * Complete type definition for incoming webhook from ShipRocket
  */
 export interface ShiprocketOrderWebhook {
   order_id: string;
@@ -7,6 +8,8 @@ export interface ShiprocketOrderWebhook {
     items: Array<{
       variant_id: string;
       quantity: number;
+      product_id?: string;
+      price?: number;
     }>;
   };
   status: 'SUCCESS' | 'FAILED' | 'PENDING';
@@ -14,13 +17,15 @@ export interface ShiprocketOrderWebhook {
   email: string;
   payment_type: 'CASH_ON_DELIVERY' | 'PREPAID';
   total_amount_payable: number;
-  
-  // Additional fields from full payload
+
+  // Customer information
   customer_details?: {
     name: string;
     phone: string;
     email: string;
   };
+
+  // Shipping address
   shipping_address?: {
     address_line_1: string;
     address_line_2?: string;
@@ -29,6 +34,8 @@ export interface ShiprocketOrderWebhook {
     pincode: string;
     country: string;
   };
+
+  // Billing address
   billing_address?: {
     address_line_1: string;
     address_line_2?: string;
@@ -37,10 +44,18 @@ export interface ShiprocketOrderWebhook {
     pincode: string;
     country: string;
   };
+
+  // Additional metadata (optional fields from ShipRocket)
+  coupon_code?: string;
+  discount_amount?: number;
+  shipping_charges?: number;
+  payment_method?: string;
+  transaction_id?: string;
 }
 
 /**
- * Catalog API Response Format (for Shiprocket to consume)
+ * Catalog API Response Format (for ShipRocket to consume)
+ * This is what your app returns to ShipRocket when they fetch products
  */
 export interface CatalogProductsResponse {
   products: Array<{
@@ -75,6 +90,10 @@ export interface CatalogProductsResponse {
   };
 }
 
+/**
+ * Collections API Response Format (for ShipRocket to consume)
+ * This is what your app returns to ShipRocket when they fetch collections
+ */
 export interface CatalogCollectionsResponse {
   collections: Array<{
     id: string;
@@ -89,52 +108,4 @@ export interface CatalogCollectionsResponse {
     total_count: number;
     per_page: number;
   };
-}
-
-export interface ShiprocketOrderWebhook {
-  order_id: string;
-  cart_data: {
-    items: Array<{
-      variant_id: string;
-      quantity: number;
-      product_id?: string;
-      price?: number;
-    }>;
-  };
-  status: 'SUCCESS' | 'FAILED' | 'PENDING';
-  phone: string;
-  email: string;
-  payment_type: 'CASH_ON_DELIVERY' | 'PREPAID';
-  total_amount_payable: number;
-  
-  customer_details?: {
-    name: string;
-    phone: string;
-    email: string;
-  };
-  
-  shipping_address?: {
-    address_line_1: string;
-    address_line_2?: string;
-    city: string;
-    state: string;
-    pincode: string;
-    country: string;
-  };
-  
-  billing_address?: {
-    address_line_1: string;
-    address_line_2?: string;
-    city: string;
-    state: string;
-    pincode: string;
-    country: string;
-  };
-  
-  // Additional metadata
-  coupon_code?: string;
-  discount_amount?: number;
-  shipping_charges?: number;
-  payment_method?: string;
-  transaction_id?: string;
 }

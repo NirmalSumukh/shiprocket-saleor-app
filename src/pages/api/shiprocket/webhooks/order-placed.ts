@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '@/saleor-app-checkout/backend/saleor';
+import { createClientWithToken } from '@/lib/saleor/create-client';
 import { OrderService } from '@/lib/shiprocket/order-service';
 import { ShiprocketOrderWebhook } from '@/lib/shiprocket/types';
 import { verifyHMAC } from '@/lib/shiprocket/hmac';
@@ -9,7 +9,12 @@ import { logger } from '@/lib/shiprocket/logger';
  * POST /api/shiprocket/webhooks/order-placed
  * 
  * ShipRocket calls this webhook after successful checkout
- * Creates order in Saleor
+ * Creates corresponding order in Saleor
+ * 
+ * Headers:
+ * - x-api-hmac-sha256: HMAC signature for verification
+ * 
+ * Body: ShiprocketOrderWebhook payload
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -22,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.info('Received order webhook from ShipRocket', {
       orderId: webhookData.order_id,
       status: webhookData.status,
+      itemCount: webhookData.cart_data?.items?.length || 0,
     });
 
     // Step 1: Verify HMAC signature (security check)
@@ -39,29 +45,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Step 2: Validate webhook payload
     if (!webhookData.order_id || !webhookData.cart_data?.items) {
-      logger.warn('Invalid webhook payload', webhookData);
+      logger.warn('Invalid webhook payload - missing required fields', {
+        hasOrderId: !!webhookData.order_id,
+        hasCartData: !!webhookData.cart_data,
+        hasItems: !!webhookData.cart_data?.items,
+      });
       return res.status(400).json({
         success: false,
         error: 'Invalid webhook payload',
       });
     }
 
-    // Step 3: Create Saleor GraphQL client
-    const saleorApiUrl = process.env.SALEOR_API_URL || '';
-    const client = createClient(saleorApiUrl, async () => ({
-      token: process.env.SALEOR_APP_TOKEN || '',
-    }));
+    // Step 3: Get Saleor configuration
+    const saleorApiUrl = process.env.SALEOR_API_URL;
+    const saleorAppToken = process.env.SALEOR_APP_TOKEN;
+    const channel = process.env.SALEOR_DEFAULT_CHANNEL || 'default-channel';
 
-    // Step 4: Process order creation
+    if (!saleorApiUrl || !saleorAppToken) {
+      logger.error('Missing Saleor configuration');
+      return res.status(500).json({
+        success: false,
+        error: 'Server configuration error',
+      });
+    }
+
+    // Step 4: Create Saleor GraphQL client
+    const client = createClientWithToken(saleorApiUrl, saleorAppToken);
+
+    // Step 5: Process order creation
     const orderService = new OrderService(client);
-    const result = await orderService.createOrderFromWebhook(webhookData);
+    const result = await orderService.createOrderFromWebhook(webhookData, channel);
 
     if (!result.success) {
-      logger.error('Failed to create order', {
+      logger.error('Failed to create order in Saleor', {
         shiprocketOrderId: webhookData.order_id,
         error: result.error,
       });
-      
+
       // Return 200 to prevent ShipRocket from retrying
       // Log error for manual intervention
       return res.status(200).json({
@@ -85,8 +105,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     logger.error('Order webhook processing error', error);
-    
+
     // Return 200 to prevent infinite retries from ShipRocket
+    // The order will need manual intervention
     return res.status(200).json({
       success: false,
       error: 'Internal error',
@@ -96,10 +117,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 /**
- * Disable Next.js body parsing to get raw body for HMAC verification
+ * Next.js API config
+ * Keep bodyParser enabled for JSON parsing
+ * If HMAC verification requires raw body, set to false and handle manually
  */
 export const config = {
   api: {
-    bodyParser: true, // Set to false if you need raw body for HMAC
+    bodyParser: true,
   },
 };

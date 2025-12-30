@@ -9,18 +9,23 @@ import { FileAPL } from "@saleor/app-sdk/APL/file";
  * To read more about storing auth data, read the
  * [APL documentation](https://github.com/saleor/saleor-app-sdk/blob/main/docs/apl.md)
  */
-export let apl: APL;
 
-switch (process.env.APL) {
-  /**
-   * Depending on env variables, chose what APL to use.
-   * To reduce the footprint, import only these needed
-   *
-   * TODO: See docs
-   */
-  default:
-    apl = new FileAPL();
+// Create APL instance based on environment
+function getAPL(): APL {
+  switch (process.env.APL) {
+    /**
+     * Depending on env variables, chose what APL to use.
+     * To reduce the footprint, import only these needed
+     *
+     * TODO: See docs
+     */
+    default:
+      return new FileAPL();
+  }
 }
+
+// Export as const (not let)
+export const apl: APL = getAPL();
 
 export const saleorApp = new SaleorApp({
   apl,

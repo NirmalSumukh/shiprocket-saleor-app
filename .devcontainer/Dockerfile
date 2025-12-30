@@ -6,10 +6,19 @@ RUN corepack enable
 
 WORKDIR /app
 
-# This is needed so pnpm-store volume is created with correct permissions (see docker-compose.yml)
+# This is needed so pnpm-store volume is created with correct permissions
 RUN mkdir -p /app/.pnpm-store
 RUN chown -R node:node /app/.pnpm-store
 
-COPY package.json pnpm-lock.yaml ./
+# Copy package files and install dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
+
+# Copy GraphQL schema and codegen config for generation
+COPY graphql ./graphql
+COPY codegen.ts ./
+
+# Generate GraphQL types (for development)
+RUN pnpm run generate
+
 RUN chown -R node:node /home/node/.pnpm

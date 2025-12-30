@@ -39,6 +39,7 @@ export class ShiprocketClient {
 
   /**
    * Generate checkout access token
+   * Returns token and checkout URL for ShipRocket widget
    */
   async generateAccessToken(cartData: {
     items: Array<{ variant_id: string; quantity: number }>;
@@ -51,9 +52,12 @@ export class ShiprocketClient {
     };
 
     return this.post<{
+      status?: boolean;
+      message?: string;
       result: {
         token: string;
         order_id: string;
+        checkout_url?: string; // ✅ Added this property
       };
     }>(shiprocketConfig.endpoints.accessToken, payload);
   }
@@ -81,7 +85,11 @@ export class ShiprocketClient {
       timestamp: new Date().toISOString(),
     };
 
-    return this.post(shiprocketConfig.endpoints.orderDetails, payload);
+    return this.post<{
+      status?: boolean;
+      message?: string;
+      result?: any; // ShipRocket order details
+    }>(shiprocketConfig.endpoints.orderDetails, payload);
   }
 }
 

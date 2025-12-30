@@ -1,6 +1,6 @@
 services:
   saleor-app-template:
-    image: saleor-app-template
+    image: saleor-app-template-dev
     command: sleep infinity # keeps docker container running
     build:
       context: ..
@@ -8,6 +8,26 @@ services:
     volumes:
       - "..:/app"
       - "pnpm-store:/app/.pnpm-store"
+    ports:
+      - "3010:3010"
+    environment:
+      # Pass through environment variables from host
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - NODE_ENV=${NODE_ENV:-development}
+      - APL=${APL:-file}
+      - SECRET_KEY=${SECRET_KEY:-local-dev-secret-key-12345}
+      - APP_IFRAME_BASE_URL=${APP_IFRAME_BASE_URL:-http://localhost:3010}
+      - APP_API_BASE_URL=${APP_API_BASE_URL:-http://host.docker.internal:3010}
+      - SALEOR_API_URL=${SALEOR_API_URL:-http://localhost:8000/graphql/}
+      - SALEOR_APP_TOKEN=${SALEOR_APP_TOKEN}
+      - DEFAULT_CHANNEL=${DEFAULT_CHANNEL:-default-channel}
+      - SHIPROCKET_API_KEY=${SHIPROCKET_API_KEY}
+      - SHIPROCKET_SECRET_KEY=${SHIPROCKET_SECRET_KEY}
+      - SHIPROCKET_API_BASE_URL=${SHIPROCKET_API_BASE_URL:-https://checkout-api.shiprocket.com}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3010}
+      - STOREFRONT_URL=${STOREFRONT_URL:-http://localhost:3001}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:9000,http://localhost:3010}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
 
 volumes:
   pnpm-store:

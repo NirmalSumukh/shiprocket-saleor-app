@@ -3,7 +3,16 @@ import { checkoutService } from '@/lib/shiprocket/checkout-service';
 import { CheckoutRequest } from '@/lib/shiprocket/checkout-types';
 import { logger } from '@/lib/shiprocket/logger';
 import { withRateLimit } from '@/lib/shiprocket/rate-limiter';
+import { withCors } from '@/lib/shiprocket/cors';
 
+/**
+ * POST /api/shiprocket/checkout/authorize
+ * 
+ * Generate ShipRocket checkout token for storefront
+ * Called by your frontend to initiate checkout
+ * 
+ * CORS-enabled for storefront access
+ */
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -25,6 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       itemCount: request.cart_data.items?.length || 0,
       hasRedirectUrl: !!request.redirect_url,
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      origin: req.headers.origin,
     });
 
     // Generate token via service
@@ -44,5 +54,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Export with rate limiting middleware
-export default withRateLimit(handler);
+// Export with CORS and rate limiting middleware
+// CORS must be applied BEFORE rate limiting
+export default withCors(withRateLimit(handler), {
+  allowedMethods: ['POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  maxAge: 86400, // 24 hours cache for preflight
+});
