@@ -1,7 +1,7 @@
 # ============================================
 # Saleor ShipRocket App - Traefik Integration
 # ============================================
-# 
+#
 # This app integrates with your existing Saleor backend's Traefik reverse proxy.
 # It joins the leemasmart-network to communicate with other services.
 #
@@ -63,18 +63,18 @@ services:
       # ============================================
       # Enable Traefik for this container
       - "traefik.enable=true"
-      
+
       # Docker network to use
-      - "traefik.docker.network=leemasmart-network"
-      
+      - "traefik.docker.network=leemasmart-backend_leemasmart-network"
+
       # HTTPS Router - Main route for shiprocket.leemasmart.com
       - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
       - "traefik.http.routers.shiprocket.entrypoints=websecure"
       - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
-      
+
       # Load balancer configuration
       - "traefik.http.services.shiprocket.loadbalancer.server.port=3010"
-      
+
       # Security headers middleware
       - "traefik.http.routers.shiprocket.middlewares=shiprocket-headers"
       - "traefik.http.middlewares.shiprocket-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
@@ -84,11 +84,11 @@ services:
       # Persistent storage for file-based APL (stores app auth tokens)
       - shiprocket-data:/app/data
     networks:
-      - leemasmart-network
+      - leemasmart-backend_leemasmart-network
     expose:
       - "3010"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -97,8 +97,10 @@ services:
 # ============================================
 # Networks - Join existing Saleor network
 # ============================================
+# Network name is prefixed with the Saleor backend's project name
+# Check with: docker network ls | grep leemasmart
 networks:
-  leemasmart-network:
+  leemasmart-backend_leemasmart-network:
     external: true
 
 # ============================================
