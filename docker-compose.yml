@@ -65,7 +65,7 @@ services:
       - "traefik.enable=true"
 
       # Docker network to use
-      - "traefik.docker.network=leemasmart-backend_leemasmart-network"
+      - "traefik.docker.network=leemasmart-network"
 
       # HTTPS Router - Main route for shiprocket.leemasmart.com
       - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
