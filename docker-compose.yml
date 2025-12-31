@@ -24,7 +24,6 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=leemasmart-backend_leemasmart-network"
       - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
       - "traefik.http.routers.shiprocket.entrypoints=websecure"
       - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
