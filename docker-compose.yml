@@ -1,3 +1,16 @@
+# ============================================
+# Saleor ShipRocket App - Standalone Deployment
+# ============================================
+#
+# PREREQUISITES:
+#   1. Global Traefik must be running (creates proxy-network)
+#   2. Saleor backend must be running on proxy-network
+#
+# Usage:
+#   docker compose up -d --build
+#
+# ============================================
+
 services:
   app:
     build:
@@ -12,7 +25,8 @@ services:
       - APP_IFRAME_BASE_URL=https://shiprocket.leemasmart.com
       - APP_API_BASE_URL=https://shiprocket.leemasmart.com
       - NEXT_PUBLIC_APP_URL=https://shiprocket.leemasmart.com
-      - SALEOR_API_URL=https://saleor.leemasmart.com/graphql/
+      # Use external URL for Saleor API (not internal Docker hostname)
+      - SALEOR_API_URL=${SALEOR_API_URL:-https://saleor.leemasmart.com/graphql/}
       - SALEOR_APP_TOKEN=${SALEOR_APP_TOKEN}
       - DEFAULT_CHANNEL=${DEFAULT_CHANNEL:-default-channel}
       - SHIPROCKET_API_KEY=${SHIPROCKET_API_KEY}
@@ -24,27 +38,29 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=proxy-network"
       - "traefik.http.routers.shiprocket.rule=Host(`shiprocket.leemasmart.com`)"
       - "traefik.http.routers.shiprocket.entrypoints=websecure"
       - "traefik.http.routers.shiprocket.tls.certresolver=letsencrypt"
       - "traefik.http.services.shiprocket.loadbalancer.server.port=3010"
-      - "traefik.http.routers.shiprocket.middlewares=shiprocket-headers"
-      - "traefik.http.middlewares.shiprocket-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+      # Traefik health check
+      - "traefik.http.services.shiprocket.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.shiprocket.loadbalancer.healthcheck.interval=10s"
     volumes:
       - shiprocket-data:/app/data
     networks:
-      - leemasmart-backend_leemasmart-network
+      - proxy-network
     expose:
       - "3010"
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3010/api/health" ]
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/" ]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
 networks:
-  leemasmart-backend_leemasmart-network:
+  proxy-network:
     external: true
 
 volumes:
