@@ -8,28 +8,46 @@ import { saleorApp } from '@/saleor-app';
 const handler = createAppRegisterHandler({
   apl: saleorApp.apl,
   /**
-   * Allow all URLs in development, restrict in production
+   * Allow Saleor URLs for app registration
    * The parameter is a string URL, not a URL object
    */
   allowedSaleorUrls: [
     (saleorApiUrl: string) => {
+      console.log('[Register] Checking Saleor URL:', saleorApiUrl);
+
       // In development, allow everything
       if (process.env.NODE_ENV === 'development') {
-        console.log('[Register] Allowing Saleor URL:', saleorApiUrl);
+        console.log('[Register] Development mode - allowing:', saleorApiUrl);
         return true;
       }
-      
-      // In production, parse and check hostname
+
+      // In production, check against allowed hosts
       try {
         const url = new URL(saleorApiUrl);
         const allowedHosts = [
-          'your-production-saleor.com',
+          'saleor.leemasmart.com',
+          'leemasmart.com',
           'localhost',
         ];
-        
-        return allowedHosts.includes(url.hostname);
+
+        // Also check if SALEOR_API_URL env matches
+        const envSaleorUrl = process.env.SALEOR_API_URL;
+        if (envSaleorUrl) {
+          try {
+            const envUrl = new URL(envSaleorUrl);
+            if (!allowedHosts.includes(envUrl.hostname)) {
+              allowedHosts.push(envUrl.hostname);
+            }
+          } catch (e) {
+            // Ignore invalid env URL
+          }
+        }
+
+        const isAllowed = allowedHosts.includes(url.hostname);
+        console.log('[Register] URL hostname:', url.hostname, 'Allowed:', isAllowed);
+        return isAllowed;
       } catch (error) {
-        console.error('[Register] Invalid URL:', saleorApiUrl);
+        console.error('[Register] Invalid URL:', saleorApiUrl, error);
         return false;
       }
     },
