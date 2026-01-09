@@ -83,7 +83,7 @@ query FetchCollectionsForShipRocket(
   }
 }
 
-# Fetch products by collection ID
+# Fetch products by collection ID (kept for backwards compatibility)
 query FetchProductsByCollection(
   $collectionId: ID!
   $first: Int!
@@ -110,6 +110,86 @@ query FetchProductsByCollection(
           category {
             name
           }
+          thumbnail {
+            url
+          }
+          variants {
+            id
+            name
+            sku
+            quantityAvailable
+            pricing {
+              price {
+                gross {
+                  amount
+                  currency
+                }
+              }
+            }
+            weight {
+              value
+              unit
+            }
+            media {
+              url
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Fetch categories as "collections" for ShipRocket
+# NOTE: Saleor collections are promotional, so we use categories for product structure
+query FetchCategoriesForShipRocket($first: Int!, $after: String) {
+  categories(first: $first, after: $after) {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+    edges {
+      node {
+        id
+        name
+        description
+        slug
+        backgroundImage {
+          url
+        }
+        products(first: 1) {
+          totalCount
+        }
+      }
+    }
+  }
+}
+
+# Fetch products by category ID
+query FetchProductsByCategory(
+  $categoryId: ID!
+  $first: Int!
+  $after: String
+  $channel: String!
+) {
+  category(id: $categoryId) {
+    id
+    name
+    products(first: $first, after: $after, channel: $channel) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+      edges {
+        node {
+          id
+          name
+          description
+          slug
+          created
+          updatedAt
           thumbnail {
             url
           }

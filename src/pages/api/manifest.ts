@@ -8,45 +8,45 @@ export default createManifestHandler({
   async manifestFactory({ appBaseUrl, request }) {
     // Use environment variable or fallback to request URL
     const baseUrl = process.env.APP_API_BASE_URL || appBaseUrl;
-    
+
     console.log('[Manifest] Generating manifest for:', baseUrl);
 
     const manifest: AppManifest = {
       id: 'saleor.app.shiprocket',
       version: '1.0.0',
       name: 'ShipRocket Checkout Integration',
-      
+
       about: 'Integrate ShipRocket Checkout for seamless order processing with Indian D2C brands',
-      
+
       // Where Saleor sends the install/auth token
       tokenTargetUrl: `${baseUrl}/api/register`,
-      
+
       // Main app URL
       appUrl: baseUrl,
-      
+
       // Required permissions
       permissions: [
         'MANAGE_PRODUCTS',
         'MANAGE_ORDERS',
         'MANAGE_CHECKOUTS',
       ],
-      
+
       // Webhooks (these will auto-register when app is installed)
       webhooks: [
         {
-          name: 'Product Updated - Sync to ShipRocket',
-          asyncEvents: ['PRODUCT_UPDATED'],
+          name: 'Product Created - Sync to ShipRocket',
+          asyncEvents: ['PRODUCT_CREATED'],
           query: `
             subscription {
               event {
-                ... on ProductUpdated {
+                ... on ProductCreated {
                   product {
                     id
                     name
                     description
                     slug
                     updatedAt
-                    category { name }
+                    category { id name }
                     thumbnail { url }
                     variants {
                       id
@@ -70,7 +70,47 @@ export default createManifestHandler({
               }
             }
           `,
-          targetUrl: `${baseUrl}/api/webhooks/saleor-product-updated`,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-product-updated`,
+          isActive: true,
+        },
+        {
+          name: 'Product Updated - Sync to ShipRocket',
+          asyncEvents: ['PRODUCT_UPDATED'],
+          query: `
+            subscription {
+              event {
+                ... on ProductUpdated {
+                  product {
+                    id
+                    name
+                    description
+                    slug
+                    updatedAt
+                    category { id name }
+                    thumbnail { url }
+                    variants {
+                      id
+                      name
+                      sku
+                      quantityAvailable
+                      pricing {
+                        price {
+                          gross {
+                            amount
+                            currency
+                          }
+                        }
+                      }
+                      weight { value unit }
+                      media { url }
+                    }
+                    metadata { key value }
+                  }
+                }
+              }
+            }
+          `,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-product-updated`,
           isActive: true,
         },
         {
@@ -89,7 +129,7 @@ export default createManifestHandler({
                       name
                       description
                       updatedAt
-                      category { name }
+                      category { id name }
                       thumbnail { url }
                       variants {
                         id
@@ -110,11 +150,53 @@ export default createManifestHandler({
               }
             }
           `,
-          targetUrl: `${baseUrl}/api/webhooks/saleor-product-variant-updated`,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-product-variant-updated`,
           isActive: true,
         },
         {
-          name: 'Collection Updated - Sync to ShipRocket',
+          name: 'Category Created - Sync to ShipRocket',
+          asyncEvents: ['CATEGORY_CREATED'],
+          query: `
+            subscription {
+              event {
+                ... on CategoryCreated {
+                  category {
+                    id
+                    name
+                    description
+                    slug
+                    backgroundImage { url }
+                  }
+                }
+              }
+            }
+          `,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-category-updated`,
+          isActive: true,
+        },
+        {
+          name: 'Category Updated - Sync to ShipRocket',
+          asyncEvents: ['CATEGORY_UPDATED'],
+          query: `
+            subscription {
+              event {
+                ... on CategoryUpdated {
+                  category {
+                    id
+                    name
+                    description
+                    slug
+                    backgroundImage { url }
+                  }
+                }
+              }
+            }
+          `,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-category-updated`,
+          isActive: true,
+        },
+        {
+          name: 'Collection Updated - Sync to ShipRocket (Deprecated)',
           asyncEvents: ['COLLECTION_UPDATED'],
           query: `
             subscription {
@@ -131,11 +213,11 @@ export default createManifestHandler({
               }
             }
           `,
-          targetUrl: `${baseUrl}/api/webhooks/saleor-collection-updated`,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-collection-updated`,
           isActive: true,
         },
       ],
-      
+
       extensions: [],
     };
 

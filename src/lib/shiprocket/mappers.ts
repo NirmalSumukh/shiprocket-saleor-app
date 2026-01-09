@@ -29,8 +29,8 @@ export function mapSaleorProductToShipRocket(saleorProduct: any): any {
       image: variant.media?.[0]?.url
         ? { src: variant.media[0].url }
         : thumbnailUrl
-        ? { src: thumbnailUrl }
-        : null,
+          ? { src: thumbnailUrl }
+          : null,
       updated_at: saleorProduct.updatedAt || new Date().toISOString(),
     })),
     image: thumbnailUrl ? { src: thumbnailUrl } : null,
@@ -91,3 +91,43 @@ export function buildCollectionsResponse(
     },
   };
 }
+
+/**
+ * Map Saleor Category to ShipRocket Collection format
+ * NOTE: Saleor collections are promotional, so we use categories as the product structure
+ * and expose them as "collections" to ShipRocket
+ */
+export function mapSaleorCategoryToShipRocketCollection(saleorCategory: any): any {
+  return {
+    id: saleorCategory.id,
+    title: saleorCategory.name || '',
+    body_html: saleorCategory.description || '',
+    updated_at: new Date().toISOString(),
+    image: saleorCategory.backgroundImage?.url
+      ? { src: saleorCategory.backgroundImage.url }
+      : null,
+    // Additional fields that might be useful
+    products_count: saleorCategory.products?.totalCount || 0,
+  };
+}
+
+/**
+ * Build paginated response for categories (formatted as collections for ShipRocket)
+ */
+export function buildCategoriesAsCollectionsResponse(
+  categories: any[],
+  page: number,
+  perPage: number,
+  totalCount: number
+): CatalogCollectionsResponse {
+  return {
+    collections: categories.map(mapSaleorCategoryToShipRocketCollection),
+    pagination: {
+      current_page: page,
+      total_pages: Math.ceil(totalCount / perPage),
+      total_count: totalCount,
+      per_page: perPage,
+    },
+  };
+}
+
