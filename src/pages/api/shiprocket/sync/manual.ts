@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const channel = (req.query.channel as string) || 'default-channel';
+        const channel = (req.query.channel as string) || process.env.DEFAULT_CHANNEL || 'default-channel';
 
         logger.info('Manual sync triggered', { channel });
 

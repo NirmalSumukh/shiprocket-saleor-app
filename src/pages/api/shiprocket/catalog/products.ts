@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
-    const channel = (req.query.channel as string) || 'default-channel';
+    const channel = (req.query.channel as string) || process.env.DEFAULT_CHANNEL || 'default-channel';
 
     logger.info(`ShipRocket catalog request: products page=${page}, limit=${limit}, channel=${channel}`);
 
