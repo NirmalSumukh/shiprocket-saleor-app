@@ -142,7 +142,7 @@ query FetchProductsByCollection(
 
 # Fetch categories as "collections" for ShipRocket
 # NOTE: Saleor collections are promotional, so we use categories for product structure
-query FetchCategoriesForShipRocket($first: Int!, $after: String) {
+query FetchCategoriesForShipRocket($first: Int!, $after: String, $channel: String!) {
   categories(first: $first, after: $after) {
     pageInfo {
       hasNextPage
@@ -158,7 +158,7 @@ query FetchCategoriesForShipRocket($first: Int!, $after: String) {
         backgroundImage {
           url
         }
-        products(first: 1) {
+        products(first: 1, channel: $channel) {
           totalCount
         }
       }

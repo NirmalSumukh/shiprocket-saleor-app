@@ -65,7 +65,7 @@ export class CatalogService {
    * Fetch categories as "collections" for ShipRocket
    * NOTE: In Saleor, collections are promotional, so we use categories for product structure
    */
-  async fetchCategories(page: number = 1, limit: number = 100) {
+  async fetchCategories(page: number = 1, limit: number = 100, channel: string = 'default-channel') {
     try {
       const itemsToFetch = page * limit;
 
@@ -79,6 +79,7 @@ export class CatalogService {
           .query(FetchCategoriesForShipRocketDocument, {
             first: limit,
             after: cursor,
+            channel,
           })
           .toPromise();
 
@@ -98,7 +99,7 @@ export class CatalogService {
       const endIndex = startIndex + limit;
       const pageCategories = allCategories.slice(startIndex, endIndex);
 
-      logger.info(`Fetched ${pageCategories.length} categories (as collections) for page ${page}`);
+      logger.info(`Fetched ${pageCategories.length} categories (as collections) for page ${page}, channel ${channel}`);
 
       return buildCategoriesAsCollectionsResponse(pageCategories, page, limit, totalCount);
     } catch (error) {

@@ -28,8 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
+    const channel = (req.query.channel as string) || process.env.DEFAULT_CHANNEL || 'default-channel';
 
-    logger.info(`ShipRocket catalog request: collections (categories) page=${page}, limit=${limit}`);
+    logger.info(`ShipRocket catalog request: collections (categories) page=${page}, limit=${limit}, channel=${channel}`);
 
     // Get config from env (synchronous)
     const saleorApiUrl = process.env.SALEOR_API_URL;
@@ -48,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const catalogService = new CatalogService(client);
     // Use fetchCategories instead of fetchCollections
-    const response = await catalogService.fetchCategories(page, limit);
+    const response = await catalogService.fetchCategories(page, limit, channel);
 
     logger.info(`Returning ${response.collections.length} categories as collections`);
     return res.status(200).json(response);

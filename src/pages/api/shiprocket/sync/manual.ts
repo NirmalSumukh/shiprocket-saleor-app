@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Fetch categories to verify connection
         logger.info('Fetching categories from Saleor...');
-        const categoriesResponse = await catalogService.fetchCategories(1, 100);
+        const categoriesResponse = await catalogService.fetchCategories(1, 100, channel);
 
         const result = {
             success: true,
