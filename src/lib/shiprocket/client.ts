@@ -63,9 +63,11 @@ export class ShiprocketClient {
     items: Array<{ variant_id: string; quantity: number }>;
     redirect_url?: string;
   }) {
-    // ShipRocket expects items directly at root level, not nested in cart_data
+    // ShipRocket expects cart_data wrapper with items inside
     const payload = {
-      items: cartData.items,
+      cart_data: {
+        items: cartData.items,
+      },
       redirect_url: cartData.redirect_url || process.env.STOREFRONT_URL,
       timestamp: new Date().toISOString(),
     };
