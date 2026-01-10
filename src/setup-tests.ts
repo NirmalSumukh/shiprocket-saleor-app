@@ -3,4 +3,9 @@
  *
  * https://vitest.dev/config/#setupfiles
  */
-export {};
+import { config } from 'dotenv';
+
+// Load environment variables from .env file for tests
+config();
+
+export { };
