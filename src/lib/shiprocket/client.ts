@@ -21,20 +21,38 @@ export class ShiprocketClient {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = getShiprocketHeaders(payload);
 
+    // Enhanced logging for debugging
+    console.log('[ShipRocket API] Request Details:', {
+      url,
+      endpoint,
+      hasApiKey: !!headers['X-Api-Key'],
+      hasHmac: !!headers['X-Api-HMAC-SHA256'],
+      payloadStructure: JSON.stringify(payload, null, 2),
+    });
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
     });
 
+    console.log('[ShipRocket API] Response:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[ShipRocket API] Error Response:', errorText);
       throw new Error(
         `ShipRocket API error (${response.status}): ${errorText}`
       );
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('[ShipRocket API] Success Response:', JSON.stringify(data, null, 2));
+    return data;
   }
 
   /**
@@ -45,8 +63,9 @@ export class ShiprocketClient {
     items: Array<{ variant_id: string; quantity: number }>;
     redirect_url?: string;
   }) {
+    // ShipRocket expects items directly at root level, not nested in cart_data
     const payload = {
-      cart_data: cartData,
+      items: cartData.items,
       redirect_url: cartData.redirect_url || process.env.STOREFRONT_URL,
       timestamp: new Date().toISOString(),
     };
