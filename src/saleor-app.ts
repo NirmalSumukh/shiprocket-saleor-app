@@ -2,6 +2,7 @@ import { APL } from "@saleor/app-sdk/APL";
 import { SaleorApp } from "@saleor/app-sdk/saleor-app";
 import { FileAPL } from "@saleor/app-sdk/APL/file";
 import path from "path";
+import { NormalizingAPL } from "@/lib/normalizing-apl";
 
 /**
  * By default auth data are stored in the `.auth-data.json` (FileAPL).
@@ -27,9 +28,11 @@ function getAPL(): APL {
      * TODO: See docs
      */
     default:
-      return new FileAPL({
-        fileName: authFilePath,
-      });
+      return new NormalizingAPL(
+        new FileAPL({
+          fileName: authFilePath,
+        })
+      );
   }
 }
 
