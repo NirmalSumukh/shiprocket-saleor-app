@@ -1,45 +1,36 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { SaleorAsyncWebhook } from '@saleor/app-sdk/handlers/next';
+import { saleorApp } from '@/saleor-app';
 import { syncService } from '@/lib/shiprocket/sync-service';
 import { logger } from '@/lib/shiprocket/logger';
-import { verifyWebhookSignature } from '@/lib/saleor-webhook-signature';
-import { getRawBody } from '@/lib/get-raw-body';
 
 /**
- * POST /api/webhooks/saleor-collection-updated
- * 
- * Saleor calls this when a collection is updated
- * Pushes the update to ShipRocket
+ * Saleor webhook for COLLECTION_UPDATED events.
+ * Uses the official SDK to verify JWS signatures via JWKS.
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+export const collectionUpdatedWebhook = new SaleorAsyncWebhook({
+  name: 'Collection Updated - Sync to ShipRocket',
+  webhookPath: 'api/shiprocket/webhooks/saleor-collection-updated',
+  event: 'COLLECTION_UPDATED',
+  isActive: true,
+  apl: saleorApp.apl,
+  query: ``,
+});
+
+export default collectionUpdatedWebhook.createHandler(async (req, res, ctx) => {
+  const payload: any = ctx.payload;
+  const collection = payload?.collection;
+
+  if (!collection || !collection.id) {
+    logger.warn('Invalid collection webhook payload', payload);
+    return res.status(400).json({ error: 'Invalid payload' });
   }
 
+  logger.info('Received collection update webhook from Saleor', {
+    collectionId: collection.id,
+    collectionName: collection.name,
+  });
+
   try {
-    // Step 1: Verify webhook signature
-    const rawBody = await getRawBody(req);
-    const signature = req.headers['saleor-signature'] as string;
-
-    if (!verifyWebhookSignature(rawBody, signature)) {
-      logger.warn('Invalid Saleor webhook signature');
-      return res.status(401).json({ error: 'Invalid signature' });
-    }
-
-    // Step 2: Extract collection data
-    const payload = JSON.parse(rawBody);
-    const collection = payload?.collection;
-
-    if (!collection || !collection.id) {
-      logger.warn('Invalid collection webhook payload', payload);
-      return res.status(400).json({ error: 'Invalid payload' });
-    }
-
-    logger.info('Received collection update webhook from Saleor', {
-      collectionId: collection.id,
-      collectionName: collection.name,
-    });
-
-    // Step 3: Sync to ShipRocket
     const result = await syncService.syncCollectionToShipRocket(collection);
 
     if (!result.success) {
@@ -47,7 +38,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         collectionId: collection.id,
         error: result.error,
       });
-
       return res.status(200).json({
         success: false,
         error: result.error,
@@ -55,24 +45,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    logger.info('Successfully synced collection to ShipRocket', {
-      collectionId: collection.id,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: 'Collection synced to ShipRocket',
-    });
+    logger.info('Successfully synced collection to ShipRocket', { collectionId: collection.id });
+    return res.status(200).json({ success: true, message: 'Collection synced to ShipRocket' });
   } catch (error: any) {
     logger.error('Collection webhook processing error', error);
-
-    return res.status(200).json({
-      success: false,
-      error: 'Internal error',
-      message: error.message,
-    });
+    return res.status(200).json({ success: false, error: 'Internal error', message: error.message });
   }
-}
+});
 
 export const config = {
   api: {
