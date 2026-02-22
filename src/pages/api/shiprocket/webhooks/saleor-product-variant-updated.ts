@@ -2,6 +2,7 @@ import { SaleorAsyncWebhook } from '@saleor/app-sdk/handlers/next';
 import { saleorApp } from '@/saleor-app';
 import { syncService } from '@/lib/shiprocket/sync-service';
 import { logger } from '@/lib/shiprocket/logger';
+import { verifySignatureWithFreshJwks } from '@/lib/verify-signature';
 
 /**
  * Saleor webhook for PRODUCT_VARIANT_UPDATED events.
@@ -14,6 +15,7 @@ export const productVariantUpdatedWebhook = new SaleorAsyncWebhook({
   isActive: true,
   apl: saleorApp.apl,
   query: ``,
+  verifySignatureFn: verifySignatureWithFreshJwks,
 });
 
 export default productVariantUpdatedWebhook.createHandler(async (req, res, ctx) => {
