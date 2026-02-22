@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { syncService } from '@/lib/shiprocket/sync-service';
 import { logger } from '@/lib/shiprocket/logger';
 import { verifyWebhookSignature } from '@/lib/saleor-webhook-signature';
+import { getRawBody } from '@/lib/get-raw-body';
 
 /**
  * POST /api/webhooks/saleor-collection-updated
@@ -16,15 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Step 1: Verify webhook signature
+    const rawBody = await getRawBody(req);
     const signature = req.headers['saleor-signature'] as string;
-    
-    if (!verifyWebhookSignature(req.body, signature)) {
+
+    if (!verifyWebhookSignature(rawBody, signature)) {
       logger.warn('Invalid Saleor webhook signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
     // Step 2: Extract collection data
-    const payload = req.body;
+    const payload = JSON.parse(rawBody);
     const collection = payload?.collection;
 
     if (!collection || !collection.id) {
@@ -45,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         collectionId: collection.id,
         error: result.error,
       });
-      
+
       return res.status(200).json({
         success: false,
         error: result.error,
@@ -63,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     logger.error('Collection webhook processing error', error);
-    
+
     return res.status(200).json({
       success: false,
       error: 'Internal error',
@@ -74,6 +76,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
 };

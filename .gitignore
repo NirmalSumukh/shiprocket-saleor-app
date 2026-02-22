@@ -97,4 +97,5 @@ desktop.ini
 # DOCUMENTATION (Large Files)
 # ============================================
 *.docx
+*.txt
 *.pdf

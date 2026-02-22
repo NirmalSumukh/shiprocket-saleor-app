@@ -4,6 +4,7 @@ import { OrderService } from '@/lib/shiprocket/order-service';
 import { ShiprocketOrderWebhook } from '@/lib/shiprocket/types';
 import { verifyHMAC } from '@/lib/shiprocket/hmac';
 import { logger } from '@/lib/shiprocket/logger';
+import { getRawBody } from '@/lib/get-raw-body';
 
 /**
  * POST /api/shiprocket/webhooks/order-placed
@@ -22,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const webhookData: ShiprocketOrderWebhook = req.body;
+    const rawBody = await getRawBody(req);
+    const webhookData: ShiprocketOrderWebhook = JSON.parse(rawBody);
 
     logger.info('Received order webhook from ShipRocket', {
       orderId: webhookData.order_id,
@@ -32,8 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Step 1: Verify HMAC signature (security check)
     const receivedHmac = req.headers['x-api-hmac-sha256'] as string;
-    
-    if (receivedHmac && !verifyHMAC(req.body, receivedHmac)) {
+
+    if (receivedHmac && !verifyHMAC(rawBody, receivedHmac)) {
       logger.warn('Invalid HMAC signature in webhook', {
         orderId: webhookData.order_id,
       });
@@ -123,6 +125,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
  */
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
 };

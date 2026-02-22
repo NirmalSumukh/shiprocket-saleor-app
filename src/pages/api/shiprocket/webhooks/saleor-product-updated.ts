@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { syncService } from '@/lib/shiprocket/sync-service';
 import { logger } from '@/lib/shiprocket/logger';
 import { verifyWebhookSignature } from '@/lib/saleor-webhook-signature';
+import { getRawBody } from '@/lib/get-raw-body';
 
 /**
  * POST /api/webhooks/saleor-product-updated
@@ -16,15 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Step 1: Verify webhook signature from Saleor
+    const rawBody = await getRawBody(req);
     const signature = req.headers['saleor-signature'] as string;
-    
-    if (!verifyWebhookSignature(req.body, signature)) {
+
+    if (!verifyWebhookSignature(rawBody, signature)) {
       logger.warn('Invalid Saleor webhook signature');
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
     // Step 2: Extract product data from webhook payload
-    const payload = req.body;
+    const payload = JSON.parse(rawBody);
     const product = payload?.product;
 
     if (!product || !product.id) {
@@ -45,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         productId: product.id,
         error: result.error,
       });
-      
+
       // Still return 200 to prevent Saleor from retrying
       return res.status(200).json({
         success: false,
@@ -64,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     logger.error('Product webhook processing error', error);
-    
+
     // Return 200 to prevent infinite retries
     return res.status(200).json({
       success: false,
@@ -76,6 +78,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: false,
   },
 };
