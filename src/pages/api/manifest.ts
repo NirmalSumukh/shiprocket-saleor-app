@@ -70,7 +70,7 @@ export default createManifestHandler({
               }
             }
           `,
-          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-product-updated`,
+          targetUrl: `${baseUrl}/api/shiprocket/webhooks/saleor-product-created`,
           isActive: true,
         },
         {
