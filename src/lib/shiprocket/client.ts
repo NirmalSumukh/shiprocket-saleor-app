@@ -69,7 +69,6 @@ export class ShiprocketClient {
         items: cartData.items,
       },
       redirect_url: cartData.redirect_url || process.env.STOREFRONT_URL,
-      timestamp: new Date().toISOString(),
     };
 
     return this.post<{
@@ -103,7 +102,6 @@ export class ShiprocketClient {
   async getOrderDetails(orderId: string) {
     const payload = {
       order_id: orderId,
-      timestamp: new Date().toISOString(),
     };
 
     return this.post<{
