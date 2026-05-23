@@ -1,5 +1,6 @@
 import { shiprocketConfig } from './config';
 import { getShiprocketHeaders } from './hmac';
+import { decodeSaleorId } from '@/lib/saleor/id-converter';
 
 /**
  * Generic ShipRocket API client
@@ -66,7 +67,10 @@ export class ShiprocketClient {
     // ShipRocket expects cart_data wrapper with items inside
     const payload = {
       cart_data: {
-        items: cartData.items,
+        items: cartData.items.map((item) => ({
+          variant_id: decodeSaleorId(item.variant_id),
+          quantity: item.quantity,
+        })),
       },
       redirect_url: cartData.redirect_url || process.env.STOREFRONT_URL,
       timestamp: new Date().toISOString(),

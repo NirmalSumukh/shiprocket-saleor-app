@@ -1,4 +1,5 @@
 import { CatalogProductsResponse, CatalogCollectionsResponse } from './types';
+import { decodeSaleorId } from '@/lib/saleor/id-converter';
 
 /**
  * Map Saleor Product to ShipRocket format
@@ -7,8 +8,10 @@ export function mapSaleorProductToShipRocket(saleorProduct: any): any {
   const firstVariant = saleorProduct.variants?.[0];
   const thumbnailUrl = saleorProduct.thumbnail?.url || firstVariant?.media?.[0]?.url || '';
 
+  const decodedProductId = decodeSaleorId(saleorProduct.id);
+
   return {
-    id: saleorProduct.id,
+    id: decodedProductId,
     title: saleorProduct.name || '',
     body_html: saleorProduct.description || '',
     vendor: saleorProduct.metadata?.find((m: any) => m.key === 'vendor')?.value || 'Default Vendor',
@@ -17,8 +20,8 @@ export function mapSaleorProductToShipRocket(saleorProduct: any): any {
     updated_at: saleorProduct.updatedAt || new Date().toISOString(),
     status: 'active', // Saleor doesn't have draft status in the same way
     variants: (saleorProduct.variants || []).map((variant: any) => ({
-      id: variant.id,
-      product_id: saleorProduct.id,
+      id: decodeSaleorId(variant.id),
+      product_id: decodedProductId,
       title: variant.name || 'Default',
       price: variant.pricing?.price?.gross?.amount?.toString() || '0',
       sku: variant.sku || '',
@@ -42,7 +45,7 @@ export function mapSaleorProductToShipRocket(saleorProduct: any): any {
  */
 export function mapSaleorCollectionToShipRocket(saleorCollection: any): any {
   return {
-    id: saleorCollection.id,
+    id: decodeSaleorId(saleorCollection.id),
     title: saleorCollection.name || '',
     body_html: saleorCollection.description || '',
     updated_at: new Date().toISOString(), // Saleor collections don't have updatedAt

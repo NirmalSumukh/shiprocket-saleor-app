@@ -12,6 +12,7 @@ import {
 } from '../../../generated/graphql';
 import { ShiprocketOrderWebhook } from './types';
 import { logger } from './logger';
+import { encodeSaleorId } from '@/lib/saleor/id-converter';
 
 export class OrderService {
   constructor(private client: Client) {}
@@ -117,17 +118,20 @@ export class OrderService {
 
     for (const item of items) {
       try {
+        const graphqlVariantId = encodeSaleorId(item.variant_id, 'ProductVariant');
+
         // Fetch variant details to validate it exists
         const result: OperationResult<any, any> = await this.client
           .query(GetVariantDetailsDocument, {
-            id: item.variant_id,
+            id: graphqlVariantId,
             channel,
           })
           .toPromise();
 
         if (result.error || !result.data?.productVariant) {
           logger.warn('Variant not found or unavailable', {
-            variantId: item.variant_id,
+            variantId: graphqlVariantId,
+            originalVariantId: item.variant_id,
             error: result.error?.message,
           });
           continue;
@@ -139,14 +143,14 @@ export class OrderService {
         const availableStock = variant.quantityAvailable ?? 0;
         if (availableStock < item.quantity) {
           logger.warn('Insufficient stock for variant', {
-            variantId: item.variant_id,
+            variantId: graphqlVariantId,
             requested: item.quantity,
             available: availableStock,
           });
         }
 
         lines.push({
-          variantId: item.variant_id,
+          variantId: graphqlVariantId,
           quantity: item.quantity,
         });
       } catch (error: any) {
