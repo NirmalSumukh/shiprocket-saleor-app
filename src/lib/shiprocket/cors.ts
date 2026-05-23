@@ -13,7 +13,7 @@ export function getAllowedOrigins(): string[] {
   const origins = process.env.ALLOWED_ORIGINS || '';
   return origins
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/$/, '')) // Remove trailing slash
     .filter((origin) => origin.length > 0);
 }
 
@@ -21,8 +21,6 @@ export function getAllowedOrigins(): string[] {
  * Check if origin is allowed
  */
 export function isOriginAllowed(origin: string | undefined): boolean {
-  if (!origin) return false;
-
   const allowedOrigins = getAllowedOrigins();
 
   // If no origins configured, block all
@@ -31,11 +29,21 @@ export function isOriginAllowed(origin: string | undefined): boolean {
     return false;
   }
 
-  // Check if origin is in whitelist
-  const isAllowed = allowedOrigins.includes(origin);
+  // If no origin header is present, it's likely a direct server-to-server request
+  // or a same-origin request. We'll allow it but not set CORS headers.
+  if (!origin) {
+    logger.info('No Origin header present. Allowing request as non-CORS.');
+    return true;
+  }
+
+  // Normalize origin to remove trailing slash just in case
+  const normalizedOrigin = origin.replace(/\/$/, '');
+
+  // Check if origin is in whitelist (or if '*' is allowed)
+  const isAllowed = allowedOrigins.includes('*') || allowedOrigins.includes(normalizedOrigin);
 
   if (!isAllowed) {
-    logger.warn('Blocked CORS request from unauthorized origin', { origin });
+    logger.warn('Blocked CORS request from unauthorized origin', { origin: normalizedOrigin, allowedOrigins });
   }
 
   return isAllowed;
@@ -61,24 +69,26 @@ export function setCorsHeaders(
     return false;
   }
 
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', origin!);
-  res.setHeader(
-    'Access-Control-Allow-Methods',
-    options.allowedMethods?.join(', ') || 'GET, POST, OPTIONS'
-  );
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    options.allowedHeaders?.join(', ') ||
-      'Content-Type, Authorization, X-Requested-With'
-  );
+  // Set CORS headers only if origin is present
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader(
+      'Access-Control-Allow-Methods',
+      options.allowedMethods?.join(', ') || 'GET, POST, OPTIONS'
+    );
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      options.allowedHeaders?.join(', ') ||
+        'Content-Type, Authorization, X-Requested-With'
+    );
 
-  if (options.credentials !== false) {
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+    if (options.credentials !== false) {
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
 
-  if (options.maxAge) {
-    res.setHeader('Access-Control-Max-Age', options.maxAge.toString());
+    if (options.maxAge) {
+      res.setHeader('Access-Control-Max-Age', options.maxAge.toString());
+    }
   }
 
   return true;
