@@ -81,8 +81,12 @@ export class ShiprocketClient {
       message?: string;
       result: {
         token: string;
-        order_id: string;
-        checkout_url?: string; // ✅ Added this property
+        expires_at?: string;
+        data?: {
+          order_id: string; // ✅ order_id is nested inside result.data
+        };
+        order_id?: string; // some responses may also put it at top level
+        checkout_url?: string;
       };
     }>(shiprocketConfig.endpoints.accessToken, payload);
   }

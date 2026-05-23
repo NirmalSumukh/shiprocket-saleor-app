@@ -41,13 +41,13 @@ export class CheckoutService {
       }
 
       logger.info('Successfully generated checkout token', {
-        order_id: response.result.order_id,
+        order_id: response.result.data?.order_id || response.result.order_id,
       });
 
       return {
         success: true,
         token: response.result.token,
-        order_id: response.result.order_id,
+        order_id: response.result.data?.order_id || response.result.order_id || '',
         checkout_url: response.result.checkout_url,
       };
     } catch (error: any) {
